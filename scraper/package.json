@@ -1,0 +1,26 @@
+{
+  "name": "swisscom",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.html",
+  "scripts": {
+    "start": "gulp"
+  },
+  "author": "samelie",
+  "license": "MIT",
+  "repository": {
+    "type": "git"
+  },
+  "devDependencies": {
+    "lodash": "*",
+    "request": "*",
+    "x-ray": "*",
+    "readdir":"*",
+    "bluebird":"*",
+    "colors":"*",
+    "rimraf":"*",
+    "yargs":"*",
+    "fs.extra":"*",
+    "shelljs":"*"
+  }
+}
