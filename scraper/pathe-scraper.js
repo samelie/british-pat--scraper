@@ -16,6 +16,8 @@ require('shelljs/global')
 var urls = [];
 const QUERIES_FOLDER = 'queryies'
 const WORKSPACE_FOLDER = 'workspaces'
+const EXPORT_MANIFEST = 'downloaded_manifest'
+
 const PATH = argv.w ? path.join(process.cwd(), WORKSPACE_FOLDER) :
     path.join(process.cwd(), QUERIES_FOLDER);
 
@@ -85,7 +87,6 @@ function doQuery(query) {
             console.log(colors.cyan(`${filtered.length} results`));
             //console.log(filtered);
             if (filtered.length) {
-                //var chosenVideos = filtered.splice(0, MAX_QUERY)
                 return Q.map(filtered, (url) => {
                     return _queryVideoPage(url);
                 }, {
@@ -102,9 +103,14 @@ function doQuery(query) {
                         }
                     })
                     var compactedVos = _.compact(videoVos)
-                    console.log(colors.cyan(`Downloading ${compactedVos.length} videos`));
 
-                    _.each(compactedVos, vo => { _download(vo) })
+                    if(!useWorkspaces){
+                      compactedVos = compactedVos.splice(0, MAX_QUERY) 
+                    }
+                    console.log(colors.cyan(`Downloading ${compactedVos.length} videos`));
+                    _.each(compactedVos, vo => {
+                        _download(vo)
+                    })
                 });
             } else {
                 console.log(colors.red('Nothing found for: '), query);
@@ -153,6 +159,8 @@ function _queryVideoPage(query) {
 
 function _getExistingIds() {
     var files = readDir.readSync(PATH, ['**.mp4'], readDir.ABSOLUTE_PATHS);
+    console.log(files);
+    _exportFiles(files)
     var ids = files.filter(p => {
         var parsed = path.parse(p)
         var id = parsed.name.split('_')[1].replace('.mp4', ' ').trim()
@@ -174,6 +182,11 @@ function _download(vo) {
     fs.unlinkSync(path.join(process.cwd(), `${outFile}`))
         //  var dis = 1000;
         //       var command = process.env.MP4BOX_PATH + ' -dash ' + dis + ' -frag ' + dis + ' -rap -frag-rap -profile onDemand -mpd-title ' + seg['name'] + ' -out ' + out + ' ' + seg['clip']['path'];
+}
+
+
+function _exportFiles(files){
+  fs.writeFileSync(`${EXPORT_MANIFEST}.json`,JSON.stringify(files), 'utf-8')
 }
 
 

@@ -1,0 +1,24 @@
+{
+  "name": "swisscom",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.html",
+  "scripts": {
+    "start": "gulp"
+  },
+  "author": "samelie",
+  "license": "MIT",
+  "repository": {
+    "type": "git"
+  },
+  "devDependencies": {
+    "bluebird": "^3.4.0",
+    "bug-killer": "^4.2.3",
+    "lien": "^1.0.3",
+    "node-vtt": "^1.1.7",
+    "opn": "^4.0.2",
+    "pretty-bytes": "^3.0.1",
+    "r-json": "^1.2.3",
+    "youtube-api": "^2.0.2"
+  }
+}
