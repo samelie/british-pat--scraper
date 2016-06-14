@@ -68,6 +68,9 @@ server.addPage("/oauth2callback", lien => {
 
         Q.map(UPLOADS, (vo) => {
             return new Q((resolve, reject) => {
+                if(!fs.existsSync(vo)){
+                    return resolve()
+                }
                 var req = Youtube.videos.insert({
                     resource: {
                         // Video title and description
@@ -116,11 +119,17 @@ server.addPage("/oauth2callback", lien => {
                             }
                         },*/
                         resource: {
+                            "videoId": _id,
+                            "trackKind": 'ASR',
+                            "language": 'en',
+                            "name": ' ',
+                            "isDraft": true,
                             snippet: {
                                 "videoId": _id,
                                 "trackKind": 'ASR',
                                 "language": 'en',
-                                "name": ' '
+                                "name": ' ',
+                                "isDraft": true,
                             }
                         }
                     }, (err, data) => {

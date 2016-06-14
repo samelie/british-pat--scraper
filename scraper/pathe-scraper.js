@@ -106,8 +106,8 @@ function doQuery(query) {
                     })
                     var compactedVos = _.compact(videoVos)
 
-                    if(!useWorkspaces){
-                      compactedVos = compactedVos.splice(0, MAX_QUERY) 
+                    if (!useWorkspaces) {
+                        compactedVos = compactedVos.splice(0, MAX_QUERY)
                     }
                     console.log(colors.cyan(`Downloading ${compactedVos.length} videos`));
                     _.each(compactedVos, vo => {
@@ -183,15 +183,19 @@ function _download(vo) {
     exec(`ffmpeg -i ${outFile} -loglevel panic -vf crop=352:224:0:0 -c:v libx264 -c:a copy -y ${mp4File}`)
     console.log(colors.cyan(`Converted it to: ${mp4File}`));
     //remove orig
-    fs.unlinkSync(path.join(process.cwd(), `${outFile}`))
+    try {
+        fs.unlinkSync(path.join(`${outFile}`))
+    } catch (e) {
+        console.log(colors.red(`failed to unlink: ${outFile}`));
+    }
     DOWNLOADING_PATHS.push(mp4File)
         //  var dis = 1000;
         //       var command = process.env.MP4BOX_PATH + ' -dash ' + dis + ' -frag ' + dis + ' -rap -frag-rap -profile onDemand -mpd-title ' + seg['name'] + ' -out ' + out + ' ' + seg['clip']['path'];
 }
 
 
-function _exportFiles(files, dir = EXPORT_MANIFEST){
-  fs.writeFileSync(`${dir}.json`,JSON.stringify(files), 'utf-8')
+function _exportFiles(files, dir = EXPORT_MANIFEST) {
+    fs.writeFileSync(`${dir}.json`, JSON.stringify(files), 'utf-8')
 }
 
 
