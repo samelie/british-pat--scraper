@@ -11,15 +11,19 @@ import VjUtils from '../vj-utils';
 const SENTENCE_FREQ = 4
     //sometimes the sub start is really close to the next buffer
 const PROXIMITY_MARGIN = 1
+const RANDOM_FACTOR = 0.5
 
+const VERBOSE = false
 class SrtController extends ControllerBase {
 
     constructor(subtitles, options) {
         super(subtitles, options)
         this._options = options
+        if (options.isAudio) {
+            this._options.audioonly = true
+        }
         this._subtitles = subtitles
         this._sidxs = {}
-            //this._usedSubs = {}
         this._newSentenceCounter = 0
         this._videoIndex = 0
         this._subIndex = 0
@@ -31,76 +35,55 @@ class SrtController extends ControllerBase {
     }
 
     _init() {
-        this._getSidx(this.activeVideo.videoId)
+        _.each(this._subtitles, (sub) => {
+            sub.index = 0
+        })
+        this._getSidx(this.activeSubtitles.videoId)
     }
 
-    getVo(options) {
+    /*
+     */
+    getVo() {
         //to make it compatible
-        let _o = {}
-        if (options.isAudio) {
-            _o.audioonly = true
-        } else {
+        // let _o = {}
+        // if (options.isAudio) {
+        //     _o.audioonly = true
+        // }
 
-        }
-        let _key = this._getSidxKey(this.activeId, options)
-        let _sidx = this._sidxs[_key] || null
-        let _sub = this.currentSub
-        return new Q((resolve, reject) => {
-            if (_sidx) {
-                resolve(this._getSegmentFromSub(_sidx, _sub))
-            } else {
-                this._newSidx(this.activeId, _o)
-                    .then((sidx) => {
-                        _sidx = sidx
-                        this._matchSubsToRefs(_sidx)
-                        resolve(this._getSegmentFromSub(_sidx, _sub))
-                    })
-            }
+        return this._getNextSub().then(sub => {
+            Emitter.emit('controller:srt:nextSub', sub)
+            let _sidx = this._sidxs[sub.videoId]
+            return this._getSegmentFromSub(_sidx, sub)
         })
     }
 
-    set mediaSources(mediaSources) {
-        this._mediasources = mediaSources
-        mediaSources.forEach(mediaSource => {
-            mediaSource.readySignal.addOnce(this._emitVoBound)
-        })
+    //*************
+    //overridde
+    //*************
 
-        //audio is master
-        this._mediasources[0].endingSignal.add(() => {
-            this._getNextSub()
-            this._mediasources.forEach((mediasource) => {
-                this.getVo(mediasource.options)
-                    .then(vo => {
-                        mediasource.addVo(vo)
-                            //Emitter.emit('controller:addvo', vo)
-                    })
+    _onEndingSignal() {
+        this.getVo()
+            .then(vo => {
+                this._mediaSource.addVo(vo)
             })
-        })
-    }
-
-    update() {
-
-    }
-
-    _emitVo(mediasource) {
-        this.getVo(mediasource.options).then(vo => {
-            mediasource.addVo(vo)
-                //Emitter.emit('controller:addvo', vo)
-        })
     }
 
     _getSegmentFromSub(sidx, sub) {
         let _sidx = sidx.sidx
-        let { startTime, endTime } = sub
-        let _ref = _sidx.references[sub.refIndex]
-        let _vo = VjUtils.voFromRef(sidx, _ref)
+
+        //** store active ref
+        this._activeRef = _sidx.references[sub.refIndex || 0]
+
+        let _vo = VjUtils.voFromRef(sidx, this._activeRef)
         _vo.seekTime = sub.seekTime
-            //console.log(_vo);
-        console.log("------------");
-        console.log(sub.text);
-        console.log(sub);
-        console.log(_vo);
-        console.log("------------");
+        if (VERBOSE) {
+            console.log("------------");
+            console.log(sub.refIndex);
+            console.log(sub.text);
+            console.log(sub);
+            console.log(_vo);
+            console.log("------------");
+        }
         return _vo
     }
 
@@ -109,104 +92,254 @@ class SrtController extends ControllerBase {
         return ServerService.getSidx(id, options)
     }
 
-    _getSidxKey(id, options) {
-        let _type = options.isAudio || false
-        return `${id}_${_type}`
-    }
-
+    /*
+    Save the SIDX
+    */
     _newSidx(id, options = {}) {
         //depends if it has audio or not
-        let _key = this._getSidxKey(id, options)
         return this._getSidx(id, options).then(data => {
             //store the sidx for a video id
-            this._sidxs[_key] = data
+            this._sidxs[id] = data
+
+            //this._matchSubsToRefs(id, data)
 
             return data
         })
     }
 
-    get currentSub() {
-        this._currentSub = this._currentSub || this._getNextSub()
-        return this._currentSub
-    }
-
-    _getNextSub() {
-        this._currentSub = (this._newSentenceCounter % SENTENCE_FREQ === 0) ? this._findNewSentence() : this._nextSub()
-        this._newSentenceCounter++
-            return this._currentSub
-    }
-
-    _matchSubsToRefs(sidx) {
-    	console.log(sidx);
+    _matchSubsToRefs(id, sidx) {
+        let _subs = _.filter(this._subtitles, { videoId: id })[0]
         _.each(sidx.sidx.references, (ref, i) => {
             let _refS = ref.startTimeSec
             let _refD = ref.durationSec
             let _maxSegDuration = _refS + _refD
-            _.forIn(this.activeVideo, (sub) => {
-                if (sub.startTime) {
-                    if (sub.startTime > _refS && sub.startTime < _maxSegDuration) {
-                        sub.refIndex = i
-                        sub.videoId = i
-                        if (sub.startTime > _maxSegDuration - PROXIMITY_MARGIN) {
-                            sub.refIndex = i + 1
-                        } else {
-                            sub.seekTime = sub.startTime - ref.startTimeSec
-                        }
+            _.each(_subs.subs, (sub) => {
+                if (sub.startTime > _refS && sub.startTime < _maxSegDuration) {
+                    sub.refIndex = i
+                    sub.videoId = id
+                    if (sub.startTime > _maxSegDuration - PROXIMITY_MARGIN) {
+                        sub.refIndex = i + 1
+                    } else {
+                        sub.seekTime = sub.startTime - ref.startTimeSec
                     }
                 }
             })
         })
     }
 
-    _findNewSentence(randomSentence = false) {
-        let _sub;
-        if(randomSentence){
-        	this._randomizeVideoIndex()
-        }
-        let _keys = Object.keys(this.activeVideo)
-        _.each(this.activeVideo, (sub,key) => {
-        	let _index = _keys.indexOf(key)
-            if (!_sub) {
-                if (!sub.used && sub.isNewSentence) {
-                    _sub = sub
-                    _sub.used = true
-                    this.activeVideo.activeSubIndex = _index
+    // get currentSub() {
+    //     return new Q((resolve, reject) => {
+    //         this._currentSub = this._currentSub || this._getNextSub()
+    //         return this._currentSub
+    //     })
+    // }
 
-                    /*if (this.audioSidx) {
-                        this.audioSidx.references[_sub.refIndex].used = true
-                    }*/
-                }
-            }
-        })
-
-        if (!_sub) {
-            this._nextVideo()
-            return this._findNewSentence()
-        }
-        console.log(this.audioSidx);
-        //_sub.videoId = this.audioSidx.videoId
-        return _sub
+    /*
+    Decide whether it should be a new sentence or a phrase
+    */
+    _getNextSub() {
+        let _m = (this._newSentenceCounter % SENTENCE_FREQ === 0)
+        let _random = Math.random()
+        this._newSentenceCounter++
+            return _m ? this._findNewSentence(true) : this._nextRef(_random)
     }
 
-    _nextSub(random = true) {
-        let _sub;
-        let _r = Math.floor(Math.random() * this._subtitles.length)
-        let _videoSubs = this._subtitles[_r]
+    /*
+    uses activeVideoId
+    */
+    _prepareSubWithRef(sub) {
+        let sidx = this.activeSidx
+        let id = this.activeVideoId
+        let _references = sidx.sidx.references
+        let _indexOf = _references.indexOf(this._activeRef)
 
-        _.each(_videoSubs, (sub,key) => {
-            if (!_sub) {	
-                if (!sub.used && !sub.isNewSentence) {
-                    _sub = sub
-                    _sub.used = true
-
-                    /*if (this.audioSidx) {
-                        this.audioSidx.references[_sub.refIndex].used = true
-                    }*/
+        _.each(sidx.sidx.references, (ref, i) => {
+            let _refS = ref.startTimeSec
+            let _refD = ref.durationSec
+            let _maxSegDuration = _refS + _refD
+            if (sub.startTime > _refS && sub.startTime < _maxSegDuration) {
+                sub.refIndex = Math.max(i, _indexOf + 1)
+                sub.videoId = id
+                if (sub.startTime > _maxSegDuration - PROXIMITY_MARGIN) {
+                    sub.refIndex += 1
+                } else {
+                    sub.seekTime = sub.startTime - ref.startTimeSec
                 }
             }
         })
+        return sub
+    }
 
-        return _sub
+    /*
+    Here we look at the subtitles for a new Sentence
+    And go to that ref
+    */
+    _findNewSentence(randomSentence = false) {
+        return new Q((resolve, reject) => {
+            let _sub;
+            if (randomSentence) {
+                this._randomizeVideoIndex()
+            }
+
+            let _videoId = this.activeVideoId
+            let _findSub = () => {
+                _.each(this.activeSubtitles.subs, (sub, i) => {
+                    if (!_sub) {
+                        if (!sub.used && sub.isNewSentence) {
+                            _sub = sub
+                            this.activeSubtitles.index = i
+                            _sub.used = true
+                            this._prepareSubWithRef(_sub)
+                        }
+                    }
+                })
+                resolve(_sub)
+            }
+
+            if (!this._sidxs[_videoId]) {
+                this._newSidx(_videoId, this._options)
+                    .then(sidx => {
+                        return _findSub()
+                    })
+            } else {
+                _findSub()
+            }
+        })
+    }
+
+
+    _nextRef(randomFactor = RANDOM_FACTOR) {
+        return new Q((resolve, reject) => {
+
+            randomFactor = 0.8
+
+            let _sidx = this.activeSidx
+            let _references = _sidx.sidx.references
+            let _indexOf = _references.indexOf(this._activeRef)
+            let _sub, _videoSubs, _videoIndex, _ref, _videoId, _subIndex
+
+
+            /*   let _findSub = (videoSubs, subIndex) => {
+                _sub = videoSubs[subIndex]
+                let _i = subIndex
+                while(videoSubs[_i].isNewSentence || videoSubs[_i].used){
+                    _sub = videoSubs[_i]
+                    _i++
+                }
+                _sub.videoId = _videoId
+                _sub.used = true
+                resolve(_sub)
+            }
+
+            if (randomFactor > 0.75) {
+                //random video from playlist
+                _videoIndex = Math.floor(Math.random() * this._subtitles.length)
+                _videoId = this._subtitles[_videoIndex].videoId
+                this._subtitles[_videoIndex].index++;
+                _subIndex = this._subtitles[_videoIndex].index
+                    //the subs
+                _videoSubs = this._subtitles[_videoIndex].subs
+
+
+                if (!this._sidxs[_videoId]) {
+                    this._newSidx(_videoId, this._options)
+                        .then(sidx => {
+                            return _findSub(_videoSubs, _subIndex)
+                        })
+                } else {
+                    _findSub(_videoSubs, _subIndex)
+                }
+
+            } else if (randomFactor > 0.25 && randomFactor < 0.5) {
+                //clone and shuffle
+                _videoSubs = Utils.shuffle(this.activeSubtitles.subs.slice(0))
+*/
+            /*
+            Just move down subIndex
+            */
+            // } else {
+
+            _videoSubs = this.activeSubtitles.subs
+            _sub = _videoSubs[this.activeSubtitles.index + 1] || _videoSubs[this.activeSubtitles]
+
+            _ref = _references[_indexOf + 1]
+            if (!_ref) {
+                throw new Error('Out of Refs!')
+                return
+            }
+            _sub.videoId = this.activeVideoId
+            _sub.refIndex = _indexOf + 1
+            _sub.used = true
+
+            resolve(_sub)
+
+            //_nextSub.seekTime = 0
+            /*console.log("))))))))))))");
+            console.log(this.activeVideoId, this.activeSubtitles.index, randomFactor);
+            console.log("))))))))))))");*/
+            //}
+
+        })
+
+    }
+
+    _nextSub(randomFactor = RANDOM_FACTOR) {
+        return new Q((resolve, reject) => {
+            randomFactor = 0.1
+
+            let _sub, _videoSubs, _videoId, _videoIndex = this.activeVideoId;
+            _videoId = this.activeVideoId
+            if (randomFactor > 0.75) {
+                //random video from playlist
+                _videoIndex = Math.floor(Math.random() * this._subtitles.length)
+                _videoId = this._subtitles[_videoIndex].videoId
+                    //the subs
+                _videoSubs = this._subtitles[_videoIndex].subs
+            } else if (randomFactor > 0.25 && randomFactor < 0.5) {
+                //clone and shuffle
+                _videoSubs = Utils.shuffle(this.activeSubtitles.subs.slice(0))
+            } else {
+                _videoSubs = this.activeSubtitles.subs
+
+                let _nextSub = _videoSubs[this.activeSubtitles.index + 1] || _videoSubs[this.activeSubtitles]
+                _nextSub.refIndex += 1
+                _nextSub.seekTime = 0
+                if (VERBOSE) {
+                    console.log("))))))))))))");
+                    console.log(this.activeVideoId, this.activeSubtitles.index, randomFactor);
+                    console.log("))))))))))))");
+                }
+            }
+
+            let _findSub = () => {
+                _.each(_videoSubs, (sub, i) => {
+                    if (!_sub) {
+                        if (!sub.used && !sub.isNewSentence) {
+                            _sub = sub
+                            this.activeSubtitles.index = i
+                            if (VERBOSE) {
+                                console.log(">>>>>>>>>>>");
+                                console.log(this.activeVideoId, this.activeSubtitles.index, randomFactor);
+                                console.log("refIndex", _sub.refIndex);
+                                console.log(">>>>>>>>>>>");
+                            }
+                            _sub.used = true
+                        }
+                    }
+                })
+                _sub.videoId = _videoId
+                resolve(_sub)
+            }
+
+            if (!this._sidxs[_videoId]) {
+                this._newSidx(_videoId, this._options)
+                    .then(sidx => {
+                        return _findSub()
+                    })
+            } else {
+                _findSub()
+            }
+        })
     }
 
     _nextVideo() {
@@ -220,31 +353,17 @@ class SrtController extends ControllerBase {
         this._videoIndex = Math.floor(Math.random() * this._subtitles.length)
     }
 
-    get activeVideo() {
+    get activeSubtitles() {
         return this._subtitles[this._videoIndex]
     }
 
-    get activeId() {
-        return this.activeVideo.videoId
+    get activeVideoId() {
+        return this.activeSubtitles.videoId
     }
 
     get activeSidx() {
-        let _key = this._getSidxKey(this.activeId, options)
-        let _sidx = this._sidxs[_key] || null
-        return this._activeSidx
+        return this._sidxs[this.activeVideoId] || null
     }
-
-    get audioSidx() {
-        let _key = this._getSidxKey(this.activeId, { isAudio: true })
-        return this._sidxs[_key]
-    }
-
-    get videoSidx() {
-        let _key = this._getSidxKey(this.activeId, { isAudio: false })
-        return this._sidxs[_key]
-    }
-
-
 }
 
 export default SrtController;

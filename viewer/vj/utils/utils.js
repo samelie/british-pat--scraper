@@ -50,6 +50,10 @@ Utils.getRandom = (list) => {
     return v;
 };
 
+Utils.getRandomNumberRange = (range)=>{
+    return Math.floor(Math.random() * range)
+}
+
 Utils.getIdFromItem = (item) => {
     if (_.isObject(item.id)) {
         return item.id.videoId;

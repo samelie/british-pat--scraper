@@ -16,7 +16,7 @@ require('shelljs/global')
 var urls = [];
 const QUERIES_FOLDER = 'queryies'
 const WORKSPACE_FOLDER = 'workspaces'
-const EXPORT_MANIFEST = 'downloaded_manifest'
+const EXPORT_MANIFEST = 'downloaded_manifest_all'
 
 const PATH = argv.w ? path.join(process.cwd(), WORKSPACE_FOLDER) :
     path.join(process.cwd(), QUERIES_FOLDER);
@@ -42,6 +42,7 @@ if (argv.reset) {
 var _q = argv.q.split(' ').join('+');
 var query = `${QUERY_URL}${_q}`
 let OUTPUT_DIRECTORY = path.join(PATH, _q)
+const EXPORT_MANIFEST_QUERY = `downloaded_manifest_${_q}`
 
 if (argv.start) {
     query += `/start/${argv.start}`
@@ -52,6 +53,7 @@ if (argv.end) {
 }
 
 const EXISTING_IDS = _getExistingIds()
+const DOWNLOADING_PATHS = []
 
 function doQuery(query) {
     return new Q((resolve, reject) => {
@@ -111,6 +113,9 @@ function doQuery(query) {
                     _.each(compactedVos, vo => {
                         _download(vo)
                     })
+                    console.log(colors.green(`Downloading complete`));
+                    _exportFiles(DOWNLOADING_PATHS, EXPORT_MANIFEST_QUERY)
+                    console.log(colors.green(`Exported manifest query ${EXPORT_MANIFEST_QUERY}`));
                 });
             } else {
                 console.log(colors.red('Nothing found for: '), query);
@@ -159,7 +164,6 @@ function _queryVideoPage(query) {
 
 function _getExistingIds() {
     var files = readDir.readSync(PATH, ['**.mp4'], readDir.ABSOLUTE_PATHS);
-    console.log(files);
     _exportFiles(files)
     var ids = files.filter(p => {
         var parsed = path.parse(p)
@@ -180,13 +184,14 @@ function _download(vo) {
     console.log(colors.cyan(`Converted it to: ${mp4File}`));
     //remove orig
     fs.unlinkSync(path.join(process.cwd(), `${outFile}`))
+    DOWNLOADING_PATHS.push(mp4File)
         //  var dis = 1000;
         //       var command = process.env.MP4BOX_PATH + ' -dash ' + dis + ' -frag ' + dis + ' -rap -frag-rap -profile onDemand -mpd-title ' + seg['name'] + ' -out ' + out + ' ' + seg['clip']['path'];
 }
 
 
-function _exportFiles(files){
-  fs.writeFileSync(`${EXPORT_MANIFEST}.json`,JSON.stringify(files), 'utf-8')
+function _exportFiles(files, dir = EXPORT_MANIFEST){
+  fs.writeFileSync(`${dir}.json`,JSON.stringify(files), 'utf-8')
 }
 
 

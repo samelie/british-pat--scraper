@@ -20,9 +20,11 @@ const Youtube = require("youtube-api"),
     Q = require("bluebird"),
     prettyBytes = require("pretty-bytes");
 
+var argv = require('yargs').argv;
 // I downloaded the file from OAuth2 -> Download JSON
 const CREDENTIALS = readJson(`${__dirname}/credentials.json`);
-const UPLOADS = readJson(`${__dirname}/downloaded_manifest.json`);
+let _upload = argv.manifest || 'downloaded_manifest.json'
+const UPLOADS = readJson(`${__dirname}/${_upload}`);
 
 // Init lien server
 let server = new Lien({
@@ -42,7 +44,10 @@ let oauth = Youtube.authenticate({
 
 opn(oauth.generateAuthUrl({
     access_type: "offline",
-    scope: ["https://www.googleapis.com/auth/youtube.upload"]
+    scope: ["https://www.googleapis.com/auth/youtube.upload",
+        "https://www.googleapis.com/auth/youtubepartner",
+        "https://www.googleapis.com/auth/youtube.force-ssl"
+    ]
 }));
 
 // Handle oauth2 callback
@@ -67,7 +72,11 @@ server.addPage("/oauth2callback", lien => {
                     resource: {
                         // Video title and description
                         snippet: {
-                            title: String(Math.random() * 999999)
+                            title: String(Math.random() * 999999),
+                            defaultLanguage: 'en',
+                            localizations: {
+                                "English": "en"
+                            }
                         }
                         // I don't want to spam my subscribers
                         ,
@@ -86,8 +95,41 @@ server.addPage("/oauth2callback", lien => {
                     }
                 }, (err, data) => {
                     clearInterval(_i)
-                    console.log("Done.");
-                    resolve()                    
+                    let _id = data.id
+                    console.log(_id);
+                    Youtube.captions.insert({
+                        part: 'snippet',
+                        /* snippet: {
+                             "videoId": _id,
+                             "trackKind": 'ASR',
+                             "language": 'en-GB',
+                             "isDraft": false,
+                             "name": 'sam-auto-track',
+                         },*/
+                        /*resource: {
+                            snippet: {
+                                "videoId": _id,
+                                "trackKind": 'ASR',
+                                "language": 'en-GB',
+                                "isDraft": false,
+                                "name": 'sam-auto-track',
+                            }
+                        },*/
+                        resource: {
+                            snippet: {
+                                "videoId": _id,
+                                "trackKind": 'ASR',
+                                "language": 'en',
+                                "name": ' '
+                            }
+                        }
+                    }, (err, data) => {
+                        console.log(err);
+                        console.log("Done Captioning");
+                        resolve()
+                    });
+                    console.log(data);
+                    console.log("Done Uploading");
                 });
 
                 var _i = setInterval(function() {
@@ -95,6 +137,6 @@ server.addPage("/oauth2callback", lien => {
                 }, 250);
 
             })
-        }, { concurrency: 1 }).then(()=>{process.exit()})
+        }, { concurrency: 1 }).then(() => { process.exit() })
     });
 });

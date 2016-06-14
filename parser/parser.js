@@ -53,6 +53,10 @@ function _getSrt(id) {
                     let _srt = SRC(data)
                     let _previousEnd = 0
                     let _previousBlock
+                    let _srts = {
+                        videoId:undefined,
+                        subs:[]
+                    }
                     _.forIn(_srt, (block, i) => {
                         block.index = block.number
                         block.endTime /= 1000
@@ -60,6 +64,7 @@ function _getSrt(id) {
                         block.duration = block.endTime - block.startTime
                         block.isNewSentence = /[A-Z]/.test(block.text.charAt(0))
                         block.isNewSentence = false
+                        block.videoId = id
                         if (block.startTime - _previousEnd > PAUSE_FOR_NEW_SENTENCE) {
                             if(_previousBlock){
                                 _previousBlock.isSentenceEnd = true
@@ -68,11 +73,11 @@ function _getSrt(id) {
                         }
                         _previousBlock = block
                         _previousEnd = block.endTime
-                        //console.log(block);
+                        _srts.subs.push(block)
                     })
-                    _srt.videoId = id
+                    _srts.videoId = id
                     Logger.log(`Success for ${id}`);
-                    resolve(_srt)
+                    resolve(_srts)
                 })
             } else {
                 Logger.log(`No Srt for ${id}`);

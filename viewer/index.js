@@ -1,13 +1,16 @@
 import VjRenderer from './vj/vj-fx-renderer'
 import VJManager from './vj/vj-mediasource-manager';
 import ControllerSrt from './vj/controllers/vj-controller-srt';
+import ControllerVideo from './vj/controllers/vj-controller-video';
+import ControllerManager from './vj/controllers/vj-controller-manager';
 //import SocketIo from './vj/socket/socket';
 import dat from 'dat-gui';
 import maximize from 'maximize.js'
 import JSONLOADER from 'load-json-xhr'
 
 
-const PLAYLIST = "PLfLZBA-EW1RWysn04AlIRl2vea-G80Hf3";
+const PLAYLIST_VIDEO = "PLfLZBA-EW1RXgj4u_HEIlVeW52XnheGtd";
+const PLAYLIST_AUDIO = "PLfLZBA-EW1RVTTGauj7U10Y7hTfAZ1bEb";
 
 var appEl = document.getElementById('app')
 var threeEl = document.getElementById('three')
@@ -26,14 +29,16 @@ const OPTIONS = {
 }
 
 
-JSONLOADER(`playlists/${PLAYLIST}.json`, function(err, data) {
+JSONLOADER(`playlists/${PLAYLIST_AUDIO}.json`, function(err, data) {
     //vj.controller = new ControllerSrt(data)
-    let _controller = new ControllerSrt(data)
+    let _srtController = new ControllerSrt(data, {isAudio: true, playlists: [PLAYLIST_AUDIO]})
+    let _videoController = new ControllerVideo({isAudio: false, playlists: [PLAYLIST_VIDEO]})
+    let _controller = new ControllerManager([_srtController, _videoController])
     vj = new VJManager(appEl, {
         autoUpdate: false,
-        controller: _controller,
         mediaSources: [{
-            playlists: [PLAYLIST],
+            playlists: [PLAYLIST_AUDIO],
+            controller:_srtController,
             shufflePlaylist: true,
             shuffleVideoSegments: true,
             maxVideoTime: 700,
@@ -44,19 +49,20 @@ JSONLOADER(`playlists/${PLAYLIST}.json`, function(err, data) {
             },
             rewindable: true,
             verbose: true
-        }/*, {
-            playlists: [PLAYLIST],
+        }, {
+            playlists: [PLAYLIST_VIDEO],
             shufflePlaylist: true,
+            controller:_videoController,
             shuffleVideoSegments: true,
             maxVideoTime: 700,
-            isAudio: true,
+            isAudio: false,
             quality: {
                 chooseBest: true,
                 resolution: '360p'
             },
             rewindable: true,
             verbose: true
-        }*/]
+        }]
     });
 
     update()

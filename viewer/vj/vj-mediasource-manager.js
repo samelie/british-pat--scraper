@@ -55,8 +55,8 @@ class VjManager {
         })
 
         //the controller
-        this._contoller = options.controller
-        this._contoller.mediaSources = this.mediaSources
+        // this._contoller = options.controller
+        //this._contoller.mediaSources = this.mediaSources
 
         /*Emitter.on(`playother`, (index) => {
             this.mediaSources.forEach((ms, i) => {
@@ -96,7 +96,9 @@ class VjManager {
         if (!options.paused) {
             el.setAttribute('autoplay', 'true');
         }
-        this.mediaSources.push(new VjMediaSource(el, options));
+        let _ms = new VjMediaSource(el, options)
+        this.mediaSources.push(_ms);
+        options.controller.mediaSource = _ms
         if (!options.isAudio) {
             this.videoCanvases.push(new VjVideoCanvas(el, options));
             this._videoCanvasesLength = this.videoCanvases.length

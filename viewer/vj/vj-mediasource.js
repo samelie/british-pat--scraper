@@ -326,7 +326,8 @@ class VjMediaSource {
                 }
                 this.sourceBuffer.appendBuffer(this.segResp);
                 if (this._currentVo.seekTime) {
-                    this.videoElement.currentTime += this._currentVo.seekTime
+                    let _t = this.videoElement.currentTime + this._currentVo.seekTime
+                    this.videoElement.currentTime = _t
                 }
             } catch (e) {
                 if (VERBOSE) {
