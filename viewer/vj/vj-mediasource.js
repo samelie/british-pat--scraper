@@ -36,10 +36,10 @@ class VjMediaSource {
         this._effects;
         this.currentVideoId;
 
-        this.readySignal = this.options.readySignal || new Signals();
-        this.videoStartedSignal = this.options.videoStartedSignal || new Signals();
-        this.endingSignal = this.options.endingSignal || new Signals();
-        this.endedSignal = this.options.endedSignal || new Signals();
+        this.readySignal = this.options.readySignal
+        this.videoStartedSignal = this.options.videoStartedSignal
+        this.endingSignal = this.options.endingSignal
+        this.endedSignal = this.options.endedSignal
 
         this.videoElement = el;
 
@@ -124,6 +124,7 @@ class VjMediaSource {
         if (ct > this.currentVo.startTime && !this.newVoStarted) {
             this.newVoStarted = true;
             this.videoStartedSignal.dispatch(this.currentVo);
+            Emitter.emit('mediasource:videostarting', this)
         }
         if (ct >= (this.totalDuration - (this.currentVo.duration * BUFFER_MARGIN_2))) {
             if (!this.requestingNewVo) {

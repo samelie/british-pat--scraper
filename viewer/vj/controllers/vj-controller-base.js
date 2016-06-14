@@ -20,7 +20,6 @@ class ControllerBase {
 
     set mediaSource(ms) {
         this._mediaSource = ms
-        console.log(this._mediaSource );
         ms.readySignal.addOnce(this._emitVoBound)
         ms.endingSignal.add(this._onEndingSignalBound)
     }

@@ -27,8 +27,6 @@ class VideoController {
 
     set mediaSource(ms) {
         this._mediaSource = ms
-            //ms.readySignal.addOnce(this._emitVoBound)
-            //ms.endingSignal.add(this._onEndingSignalBound)
     }
 
     nextVideo(sub) {
@@ -45,29 +43,14 @@ class VideoController {
                             let _indexOfCurrentRef = _references.indexOf(this._currentRef) || 0
                             let _refIndex = sub.isNewSentence ?
                                 Utils.getRandomNumberRange(_references.length - 1) :
-                                _indexOfCurrentRef+1
+                                _indexOfCurrentRef + 1
 
-                            console.log(_refIndex);
-                            let _ref = _references[_refIndex]
+
+                            let _ref = _references[_refIndex] || _references[0]
                             let _vo = VjUtils.voFromRef(sidx, _ref);
                             this._currentRef = _ref
                             return this._mediaSource.addVo(_vo)
                         }).finally()
-                        /*let _randomRef = Utils.getRandom(sidx.sidx.references);
-                            return this._mediaSource.addVo(_vo)
-                        }).finally()
-
-                    /*
-
-                                            
-                                        } else {
-                                            return this._getSidx(this.currentVideoId)
-                                            let _references = this._currentSidx.sidx.reference
-                                            let _indexOf = _references.indexOf(this._currentRef)
-                                            this._currentRef = _references[_indexOf+1]
-                                            let _vo = VjUtils.voFromRef(sidx, _randomRef);
-                                            return this._mediaSource.addVo(_vo)
-                                        }*/
                 })
         })
     }

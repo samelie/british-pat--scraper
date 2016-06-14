@@ -48,7 +48,7 @@ JSONLOADER(`playlists/${PLAYLIST_AUDIO}.json`, function(err, data) {
                 resolution: '360p'
             },
             rewindable: true,
-            verbose: true
+            verbose: false
         }, {
             playlists: [PLAYLIST_VIDEO],
             shufflePlaylist: true,
@@ -61,8 +61,23 @@ JSONLOADER(`playlists/${PLAYLIST_AUDIO}.json`, function(err, data) {
                 resolution: '360p'
             },
             rewindable: true,
-            verbose: true
+            verbose: false
         }]
+    });
+
+    renderer = new VjRenderer(threeEl, OPTIONS);
+
+    renderer.setTextures([
+        vj.getBuffersAt(0)
+    ]);
+
+    window.addEventListener('resize', () => {
+        let windowWidth = window.innerWidth;
+        let windowHeight = window.innerHeight;
+        if (vj) {
+            vj.onWindowResize(windowWidth, windowHeight);
+            renderer.onWindowResize(windowWidth, windowHeight);
+        }
     });
 
     update()
@@ -71,5 +86,6 @@ JSONLOADER(`playlists/${PLAYLIST_AUDIO}.json`, function(err, data) {
 
 function update() {
     vj.update();
+    renderer.update();
     window.requestAnimationFrame(update);
 }

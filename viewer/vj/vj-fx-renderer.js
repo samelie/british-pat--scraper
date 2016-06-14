@@ -69,76 +69,8 @@ class Renderer {
 
         this._layersLength = this._layers.length
 
-        this.layer1 = new FxLayer(
-            textures[0][0],
-            this.renderer,
-            this.camera, {
-                index: 0,
-                width: VIDEO_WIDTH,
-                texture: textures[0][1],
-                height: VIDEO_HEIGHT
-            });
-
-        this.layer2 = new FxLayer(
-            textures[1][0],
-            this.renderer,
-            this.camera, {
-                index: 1,
-                texture: textures[1][1],
-                width: VIDEO_WIDTH,
-                height: VIDEO_HEIGHT
-            });
-
-        //this.layer2 = new MoonLayer(this.renderer, this.camera);
-        let renderTargetParameters = {
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter,
-            format: THREE.RGBFormat,
-            stencilBuffer: false
-        };
-
-        this.fbo = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters);
-        this.fbo.texture.minFilter = THREE.LinearFilter;
-        this.fbo.texture.magFilter = THREE.LinearFilter;
-
-        var renderPass = new THREE.RenderPass(this.scene, this.camera);
-        var effectCopy = new THREE.ShaderPass(Shaders.copy, this.camera);
-        this.composer = new THREE.EffectComposer(this.renderer, this.fbo);
-
-        this.blendPass = new THREE.ShaderPass(Shaders.blendMoon, this.camera);
-        this.blendPass.uniforms['blendMode'].value = 15;
-
-        this.blendPass.uniforms['background'].value = this.layer2.fbo;
-        this.blendPass.uniforms['foreground'].value = this.layer1.fbo;
-
-        this.composer.addPass(renderPass);
-        this.composer.addPass(this.blendPass);
-        //this.composer.addPass(this.shapePass);
-        //  this.composer.addPass(this.rayPass);
-        //this.composer.addPass(this.textPass);
-        this.composer.addPass(effectCopy);
-
-        // let chroma = ShaderLib['blendMoon']();
-        // let shader = chroma['shader'];
-        // this.uniforms = chroma['uniforms'];
-        // //this.uniforms['uMixRatio'].value = 0.8;
-        // //this.uniforms['uThreshold'].value = 0.15;
-        // this.uniforms['blendMode'].value = 15;
-        // this.uniforms['background'].value = this.layer2.fbo;
-        // this.uniforms['foreground'].value = this.layer1.fbo;
-        // //this.uniforms['tTwo'].value = this.shapeLayer.fbo;
-        // //this.uniforms['tMix'].value = this.shapeLayer.fbo;
-
-        // let parameters = {
-        // 	fragmentShader: shader.fragmentShader,
-        // 	vertexShader: shader.vertexShader,
-        // 	uniforms: this.uniforms
-        // };
-
-        // let videoMaterial = new THREE.ShaderMaterial(parameters);
         let videoMaterial = new THREE.MeshBasicMaterial({
-            map: this.fbo
-                //color:0xff0000
+            map: this._layers[0].fbo
         });
 
         let quadgeometry = new THREE.PlaneBufferGeometry(VIDEO_WIDTH, VIDEO_HEIGHT, 2, 2);
@@ -152,27 +84,9 @@ class Renderer {
         this.onWindowResize();
     }
 
-    setBlendOpacity(o) {
-        //this.mixPass.uniforms['blendOpacity'].value = o;
-    }
-
     update() {
-        this._controlBlendUniforms();
-        //this._audioUniforms();
         this._threeRender();
         this.time++;
-    }
-
-    _controlBlendUniforms() {
-        for (var i = 0; i < this.controlKeysLength; i++) {
-            let _key = this.controlKeys[i]
-            let _newVal = this.controls[_key].value
-            let _val = this.blendPass.uniforms[_key].value
-            if (_val !== _newVal && _newVal !== undefined) {
-                console.log("renderer", _key);
-                this.blendPass.uniforms[_key].value = _newVal
-            }
-        }
     }
 
     onWindowResize(w, h) {
@@ -193,22 +107,22 @@ class Renderer {
         this.camera.top = cameraHeight / 2;
         this.camera.bottom = cameraHeight / -2;
         this.camera.updateProjectionMatrix();
-        this.layer1.resize(w, h, VIDEO_WIDTH, VIDEO_HEIGHT, scale);
-        this.layer2.resize(w, h, VIDEO_WIDTH, VIDEO_HEIGHT, scale);
+        for (var i = 0; i < this._layersLength; i++) {
+            this._layers[i].resize(w, h, VIDEO_WIDTH, VIDEO_HEIGHT, scale)
+        }
         this.mesh.scale.x = this.mesh.scale.y = scale;
 
-        if (this.options.record) {
+        this.renderer.setSize(cameraWidth, cameraHeight);
+        /*if (this.options.record) {
             this.renderer.setSize(VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
-            this.renderer.setSize(cameraWidth, cameraHeight);
-        }
+        }*/
     }
 
     _threeRender() {
-        this.layer1.render();
-        this.layer2.render();
-        this.composer.render();
-        //this.rayPass.uniforms['u_time'].value = this.time;
+        for (var i = 0; i < this._layersLength; i++) {
+            this._layers[i].render()
+        }
         this.renderer.render(this.scene, this.camera, null, true);
     }
 

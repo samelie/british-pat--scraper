@@ -30,9 +30,10 @@ class VideoCanvas {
 
         this.options.videoStartedSignal.add(this._setCanvasResolution.bind(this));
 
+        this.started = false
+
         this._init();
 
-        this.started = false
     }
 
     _setCanvasResolution() {
@@ -86,6 +87,7 @@ class VideoCanvas {
         	this.lastBufferCtx = this.lastFrameBuffer.getContext("2d");
 			this.buffers.push(this.lastFrameBuffer)
         }
+        this._setCanvasResolution()
     }
 
     update() {
@@ -156,6 +158,7 @@ class VideoCanvas {
     onResize(w, h) {
         this.windowW = w;
         this.windowH = h;
+        this._setCanvasResolution()
     }
 };
 export default VideoCanvas;

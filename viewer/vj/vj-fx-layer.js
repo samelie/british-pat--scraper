@@ -76,8 +76,9 @@ class FxLayer {
             if(_val > 1){
                 _val = 0
             }
-            this.shapeMix.uniforms['uModes'].value = _val
         },30000 * (options.index+1))
+
+        this.shapeMix.uniforms['uModes'].value = 0
         //this.fx = new FxComposer(this.scene, camera, renderer, this._mesh, this.fbo);
     }
 

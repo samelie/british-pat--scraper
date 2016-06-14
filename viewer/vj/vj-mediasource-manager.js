@@ -43,6 +43,12 @@ class VjManager {
 
         })
 
+        Emitter.on('mediasource:videostarting', (mediasource) => {
+            for (let i = 0; i < this._videoCanvasesLength; i++) {
+                this.videoCanvases[i].onResize(window.innerWidth, window.innerHeight);
+            }
+        })
+
         _.each(this.mediaSourcesConfigs, (mediaPlayers) => {
             let _o = _.merge(mediaPlayers, {
                 readySignal: new Signals(),
@@ -50,8 +56,9 @@ class VjManager {
                 endingSignal: new Signals(),
                 endedSignal: new Signals()
             });
+            _o.videoStartedSignal.iii = Math.random()
+            Object.freeze(_o)
             this._createMediaSource(_o)
-            this.mediaSourcesLength = this.mediaSources.length
         })
 
         //the controller
@@ -96,14 +103,16 @@ class VjManager {
         if (!options.paused) {
             el.setAttribute('autoplay', 'true');
         }
-        let _ms = new VjMediaSource(el, options)
-        this.mediaSources.push(_ms);
-        options.controller.mediaSource = _ms
+
         if (!options.isAudio) {
             this.videoCanvases.push(new VjVideoCanvas(el, options));
             this._videoCanvasesLength = this.videoCanvases.length
         }
-        //this.playlists.push(new VjPlaylist(this.mediaSources[this.mediaSources.length - 1], options));
+
+        let _ms = new VjMediaSource(el, options)
+        this.mediaSources.push(_ms);
+        this.mediaSourcesLength = this.mediaSources.length
+        options.controller.mediaSource = _ms
     }
 
     _update() {
@@ -116,17 +125,17 @@ class VjManager {
     }
 
     onWindowResize(w, h) {
-        for (let i = 0; i < this.mediaSourcesLength; i++) {
+        for (let i = 0; i < this._videoCanvasesLength; i++) {
             this.videoCanvases[i].onResize(w, h);
         }
     }
 
-    set controller(contoller) {
-        this._controller = contoller
-        this._controller.addVoSignal.add(() => {
+    // set controller(contoller) {
+    //     this._controller = contoller
+    //     this._controller.addVoSignal.add(() => {
 
-        })
-    }
+    //     })
+    // }
 
     update() {
         this.boundUpdate();
