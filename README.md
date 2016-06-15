@@ -9,9 +9,9 @@ http://www.britishpathe.com/search/query/london+zoo/start/1890/end/1969
 ##HOWTO
 
 ###Run the scraper 
-Follow instructions in the [README]()
+Follow instructions in the [README](https://github.com/samelie/british-pate-scraper/blob/master/scraper/README.md)
 ### Copy the downloaded manifest to uploader
-Follow instructions in the [README]()
+Follow instructions in the [README](https://github.com/samelie/british-pate-scraper/blob/master/uploader/README.md)
 ### Go make the playlists on youtube
-Follow instructions in the [README]()
+Follow instructions in the [README](https://github.com/samelie/british-pate-scraper/blob/master/parser/README.md)
 ###Then `viewer`
